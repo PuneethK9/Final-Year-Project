@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload and Process JSON</title>
+    <link rel="stylesheet" href="./index.css">
+</head>
+<body>
+
+    <h1>Upload a JSON File</h1>
+    <input type="text" id="jsonfilename">
+    <input type="file" id="jsonFileInput" accept=".json" />
+    <h1>Check a JSON File</h1>
+    <input type="file" id="jsonFileOutput" accept=".json" />
+    <pre id="output"></pre>
+
+</body>
+
+<script>
+
+    let data=[];
+
+    //console.log(document.getElementById("jsonFileInput"));
+    document.getElementById('jsonFileInput').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file && file.type === "application/json") {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+
+                    //document.getElementById('output').textContent = JSON.stringify(json, null, 2);
+
+                    // Here, you can call your function to process the JSON
+                    // categorizeMedicalForm(json);
+
+                    let formname=document.getElementById("jsonfilename").value;
+
+                    let data=JSON.parse(localStorage.getItem("FormData")) || {};
+                    console.log(data);
+
+                    let arrdata = json.Blocks;
+                    let tmpdata={};
+                    tmpdata[formname]=[];
+                    for(let i=0;i<arrdata.length;i++)
+                    {
+                        if(arrdata[i].BlockType=="WORD" && arrdata[i].TextType=="PRINTED")
+                        tmpdata[formname].push(arrdata[i].Text);
+                    }
+                    
+                    fun(data,tmpdata);
+                    //words(data,tmpdata);
+
+                }catch (error) {
+                    console.log(error);
+                    document.getElementById('output').textContent = 'Error parsing JSON file.';
+                }
+            };
+            reader.readAsText(file);
+        } else {
+            document.getElementById('output').textContent = 'Please upload a valid JSON file.';
+        }
+    });
+
+    function fun(v, arr) 
+    {
+        let tmparr=[];
+        for(let key in arr){
+            arr[key].forEach(word=>{
+                tmparr.push(word);
+            })
+            v[key]=[];
+        }
+
+        //console.log(tmparr);
+
+        tmparr=new Set(tmparr);
+        tmparr=[...tmparr];
+
+        //console.log(tmparr);
+
+        //console.log(v);
+
+        for(let key in arr){
+            tmparr.forEach(word=>{
+                v[key].push(word);
+            })
+        }
+
+        //console.log(v);
+
+        localStorage.setItem("FormData",JSON.stringify(v));
+    }
+
+    function words(v, arr) 
+    {
+        let mp = new Map();  // Map to store word frequencies
+
+        
+        // Count word frequencies in the arrays within 'v' (keys of objects)
+        for (let key in v) {
+            v[key].forEach(word => {
+                mp.set(word, (mp.get(word) || 0) + 1);  // Increment word count
+            });
+        }
+
+        // Count word frequencies in the array within 'arr' (keys of object)
+        for (let key in arr) {
+            arr[key].forEach(word => {
+                mp.set(word, (mp.get(word) || 0) + 1);  // Increment word count
+            });
+        }
+
+        // Remove words that appear more than once from the arrays within 'v'
+        for (let key in v) {
+            v[key] = v[key].filter(word => mp.get(word) <= 1);  // Keep words that appear once
+        }
+
+        // Remove words that appear more than once from the array within 'arr'
+        for (let key in arr) {
+            arr[key] = arr[key].filter(word => mp.get(word) <= 1);  // Keep words that appear once
+        }
+
+        // Push the filtered 'arr' object into 'v'
+        for (let key in arr) {
+            v[key] = arr[key]; // Assign each key-value pair from arr to v
+        }
+        localStorage.setItem("MedicalFormData",JSON.stringify(v));
+    }
+
+    document.getElementById('jsonFileOutput').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file && file.type === "application/json") {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+
+                    //document.getElementById('output').textContent = JSON.stringify(json, null, 2);
+
+                    // Here, you can call your function to process the JSON
+                    // categorizeMedicalForm(json);
+
+                    //let formname=document.getElementById("jsonfilename").value;
+
+
+                    let data=JSON.parse(localStorage.getItem("FormData")) || {};
+
+                    let arrdata = json.Blocks;
+                    let tmpdata=[];
+                    for(let i=0;i<arrdata.length;i++)
+                    {
+                        if(arrdata[i].BlockType=="WORD" && arrdata[i].TextType=="PRINTED")
+                        tmpdata.push(arrdata[i].Text);
+                    }
+                    
+                    chkwords(data,tmpdata);
+
+                }catch (error) {
+                    console.log(error);
+                    document.getElementById('output').textContent = 'Error parsing JSON file.';
+                }
+            };
+            reader.readAsText(file);
+        } else {
+            document.getElementById('output').textContent = 'Please upload a valid JSON file.';
+        }
+    });
+
+    function chkwords(v, arr) 
+    {
+        console.log(arr);
+
+        let myset=new Set(arr);
+        arr=[...myset];
+        
+        console.log(arr);
+
+        let mp=new Map();
+
+        arr.forEach(i=>{
+            for(let key in v)
+            {
+                v[key].forEach(word=>{
+                    if(i===word)
+                    mp.set(key,(mp.get(key) || 0)+1);
+                });
+            }
+        });
+
+        let ct=0,str="New Form";
+
+
+        let mins=10000;
+        let sortarr=[];
+        for(let [s,con] of mp.entries())
+        {
+            let val=con/v[s].length*100;
+
+            if(v[s].length<mins)
+            mins=v[s].length;
+
+            sortarr.push(con);
+
+            console.log(val);
+            console.log(v[s].length);
+            console.log(s);
+            if(val>ct)
+            {
+                ct=val;
+                str=s;
+            }
+        }
+
+        document.getElementById("output").innerText=str+" "+ct+"%";
+
+        if(ct>50)
+        console.log("SURE");
+        else
+        console.log("NOT SURE");
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+</script>
+
+
+
+
+
+
+</html>
